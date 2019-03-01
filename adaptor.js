@@ -325,6 +325,8 @@ function convertOperation(op,verb,path,pathItem,obj,api) {
     operation.vendorExtensions = specificationExtensions(op);
 
     operation.responses = [];
+    let uniqueReturnTypes = {};
+    let uniqueSuccessReturnTypes = {};
     for (let r in op.responses) {
         let response = op.responses[r];
         let entry = {};
@@ -394,6 +396,11 @@ function convertOperation(op,verb,path,pathItem,obj,api) {
             operation.returnTypeIsPrimitive = entry.isPrimitiveType;
             operation.returnContainer = ((entry.baseType === 'object') || (entry.baseType === 'array'));
 
+            uniqueReturnTypes[entry.dataType] = true;
+            if (entry.code >= 200 && entry.code < 300) {
+                uniqueSuccessReturnTypes[entry.dataType] = true;
+            }
+
         }
         entry.responseHeaders = []; // TODO responseHeaders
         entry.responseHeaders = convertArray(entry.responseHeaders);
@@ -402,6 +409,9 @@ function convertOperation(op,verb,path,pathItem,obj,api) {
         entry.openapi.links = response.links;
         operation.responses.push(entry);
     }
+
+    operation.returnTypeUnion = Object.keys(uniqueReturnTypes).join(' | '); // TypeScript-compatible union of all response types
+    operation.successReturnTypeUnion = Object.keys(uniqueSuccessReturnTypes).join(' | ');
 
     if (obj.sortParamsByRequiredFlag) {
         operation.allParams = operation.allParams.sort(function(a,b){
